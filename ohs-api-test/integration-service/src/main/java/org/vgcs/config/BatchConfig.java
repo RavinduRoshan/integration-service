@@ -1,6 +1,8 @@
 package org.vgcs.config;
 
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -13,19 +15,24 @@ import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.util.ResourceUtils;
 import org.vgcs.JsonFileWriter;
 import org.vgcs.model.RowOrder;
 import org.vgcs.model.ProcessedOrder;
 import org.vgcs.service.OrderProcessor;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+
 @Configuration
 @RequiredArgsConstructor
 public class BatchConfig {
-
+    private static final Logger LOGGER = LoggerFactory.getLogger(BatchConfig.class);
     @Autowired
     private ItemWriter<ProcessedOrder> writer;
 
@@ -35,6 +42,9 @@ public class BatchConfig {
     @Autowired
     private PlatformTransactionManager transactionManager;
 
+    @Value("${inputFile}")
+    private String inputFile;
+
     @Bean
     public RowOrder order() {
         return new RowOrder();
@@ -42,21 +52,28 @@ public class BatchConfig {
 
     @Bean
     public FlatFileItemReader<RowOrder> reader() {
-        return new FlatFileItemReaderBuilder<RowOrder>()
-                .name("orderItemReader")
-                .resource(new FileSystemResource("C:\\Workspace\\integration-service\\ohs-api-test\\bootstrap\\integration\\order-integration.csv"))
-                .linesToSkip(1) // Skip header line
-                .delimited()
-                .names("id", "firstName", "lastName", "email", "supplierPid", "creditCardNumber", "creditCardType", "orderId", "productPid", "shippingAddress", "country", "dateCreated", "quantity", "fullName", "orderStatus")
-                .fieldSetMapper(new BeanWrapperFieldSetMapper<RowOrder>() {{
-                    setTargetType(RowOrder.class);
-                }})
-                .build();
+        try {
+            File file = ResourceUtils.getFile("classpath:" + inputFile);
+            return new FlatFileItemReaderBuilder<RowOrder>()
+                    .name("orderItemReader")
+                    .resource(new FileSystemResource(file))
+                    .linesToSkip(1) // Skip header line
+                    .delimited()
+                    .names("id", "firstName", "lastName", "email", "supplierPid", "creditCardNumber", "creditCardType",
+                            "orderId", "productPid", "shippingAddress", "country", "dateCreated", "quantity", "fullName",
+                            "orderStatus")
+                    .fieldSetMapper(new BeanWrapperFieldSetMapper<RowOrder>() {{
+                        setTargetType(RowOrder.class);
+                    }})
+                    .build();
+        } catch (FileNotFoundException e) {
+            LOGGER.error("Error reading the order integration csv file.", e);
+            throw new RuntimeException(e);
+        }
     }
 
     @Bean
     public ItemProcessor<RowOrder, ProcessedOrder> itemProcessor() {
-        System.out.println("Item processidfffffffffffffffffffffffffffffffffffff");
         return new OrderProcessor();
     }
 
