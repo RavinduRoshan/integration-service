@@ -45,7 +45,7 @@ public class OrderProcessor implements ItemProcessor<RowOrder, ProcessedOrder> {
         return new ProcessedOrder(userPid, orderPid, supplierPid);
     }
 
-    private CompletableFuture<User.UserResponse> getUserFuture(RowOrder newOrder) {
+    CompletableFuture<User.UserResponse> getUserFuture(RowOrder newOrder) {
         return CompletableFuture.supplyAsync(() -> {
             User.CreateUserRequest userRequest = User.CreateUserRequest.newBuilder()
                     .setFullName(StringValue.of(newOrder.getFullName()))
@@ -63,7 +63,7 @@ public class OrderProcessor implements ItemProcessor<RowOrder, ProcessedOrder> {
         });
     }
 
-    private CompletableFuture<Order.OrderResponse> getOrderFuture(RowOrder newOrder, String userPid) {
+    CompletableFuture<Order.OrderResponse> getOrderFuture(RowOrder newOrder, String userPid) {
         return CompletableFuture.supplyAsync(() -> {
             Order.CreateOrderRequest orderRequest = Order.CreateOrderRequest.newBuilder()
                     .setUserPid(userPid)
