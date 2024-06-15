@@ -18,16 +18,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.util.ResourceUtils;
 import org.vgcs.JsonFileWriter;
 import org.vgcs.model.RowOrder;
 import org.vgcs.model.ProcessedOrder;
 import org.vgcs.service.OrderProcessor;
 
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.InputStream;
 
 @Configuration
 @RequiredArgsConstructor
@@ -52,24 +50,24 @@ public class BatchConfig {
 
     @Bean
     public FlatFileItemReader<RowOrder> reader() {
-        try {
-            File file = ResourceUtils.getFile("classpath:" + inputFile);
-            return new FlatFileItemReaderBuilder<RowOrder>()
-                    .name("orderItemReader")
-                    .resource(new FileSystemResource(file))
-                    .linesToSkip(1) // Skip header line
-                    .delimited()
-                    .names("id", "firstName", "lastName", "email", "supplierPid", "creditCardNumber", "creditCardType",
-                            "orderId", "productPid", "shippingAddress", "country", "dateCreated", "quantity", "fullName",
-                            "orderStatus")
-                    .fieldSetMapper(new BeanWrapperFieldSetMapper<RowOrder>() {{
-                        setTargetType(RowOrder.class);
-                    }})
-                    .build();
-        } catch (FileNotFoundException e) {
-            LOGGER.error("Error reading the order integration csv file.", e);
-            throw new RuntimeException(e);
+        InputStream inputStream = getClass().getClassLoader().getResourceAsStream(inputFile);
+        if (inputStream == null) {
+            LOGGER.error("File not found");
+            throw new RuntimeException("File not found in classpath: order-integration.csv");
         }
+
+        return new FlatFileItemReaderBuilder<RowOrder>()
+                .name("orderItemReader")
+                .resource(new InputStreamResource(inputStream))
+                .linesToSkip(1) // Skip header line
+                .delimited()
+                .names("id", "firstName", "lastName", "email", "supplierPid", "creditCardNumber", "creditCardType",
+                        "orderId", "productPid", "shippingAddress", "country", "dateCreated", "quantity", "fullName",
+                        "orderStatus")
+                .fieldSetMapper(new BeanWrapperFieldSetMapper<RowOrder>() {{
+                    setTargetType(RowOrder.class);
+                }})
+                .build();
     }
 
     @Bean
