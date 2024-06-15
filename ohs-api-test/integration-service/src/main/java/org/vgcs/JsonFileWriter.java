@@ -14,7 +14,6 @@ public class JsonFileWriter implements ItemWriter<ProcessedOrder> {
 
     @Override
     public void write(Chunk<? extends ProcessedOrder> chunk) throws Exception {
-        System.out.println("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW");
         objectMapper.writeValue(new File("processed-orders.json"), chunk);
     }
 }
